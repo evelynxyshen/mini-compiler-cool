@@ -1,0 +1,245 @@
+user: xyshen
+user: zhanghw
+
+README file for Programming Assignment 5  (C++ edition)
+=======================================================
+
+Your directory should now contain the following files:
+
+ Makefile	      -> [course dir]/assignments/PA5/Makefile
+ README
+ ast-lex.cc	      -> [course dir]/src/PA5/ast-lex.cc
+ ast-parse.cc	      -> [course dir]/src/PA5/ast-parse.cc
+ cgen-phase.cc	      -> [course dir]/src/PA5/cgen-phase.cc
+ cgen.cc
+ cgen.h
+ cgen_supp.cc
+ cool-tree.cc	      -> [course dir]/src/PA5/cool-tree.cc
+ cool-tree.handcode.h
+ dumptype.cc	      -> [course dir]/src/PA5/dumptype.cc
+ emit.h
+ example.cl
+ handle_flags.cc      -> [course dir]/src/PA5/handle_flags.cc
+ mycoolc	      -> [course dir]/src/PA5/mycoolc*
+ stringtab.cc	      -> [course dir]/src/PA5/stringtab.cc
+ tree.cc	      -> [course dir]/src/PA5/tree.cc
+ utilities.cc	      -> [course dir]/src/PA5/utilities.cc
+ *.d
+
+The include (.h) files for this assignment can be found in 
+[course dir]/include/PA5
+
+	The Makefile contains targets for compiling and running your
+	program, as well as handing it in. DO NOT MODIFY.
+
+	The README contains this info. Part of the assignment is to
+	fill the README with the write-up for your project. You should
+	explain design decisions, explain why your code is correct,
+	and why your test cases are adequate. It is part of the
+	assignment to clearly and concisely explain things in text as
+	well as to comment your code. Just edit this file.
+
+	In example.cl you should write a correct Cool program which
+	tests as many aspects of the code generator as possible. It
+	should pass your code generator, and running spim on the
+	generated output should run the program correctly.
+
+	cgen.cc is the skeleton file for the code generator. This
+	skeleton is much larger than the ones for previous
+	assignments.  The skeleton provides three components of the
+	code generator:
+
+		- functions to build the inheritance graph; (we supply
+		  this in case you didn't get this working for PA4)
+
+		- functions to emit global data and constants;
+		 
+		- functions to emit spim instructions; (we supply
+		  these last two to save you some tedious coding)
+
+	You should work to understand this code, and it will help you
+        write the rest of the code generator.
+
+	cgen.h is the header file for the code generator. Feel free to
+	add anything you need.
+
+	cgen_supp.cc is general support code for the code generator.
+	You can add functions as you see fit, but do not modify the 3
+	functions:
+
+		o byte_mode
+		o ascii_mode
+		o emit_string_constant
+
+	emit.h defines a bunch of macros which should come in handy
+	when you actually want to emit code. Feel free to change
+	anything here to suit your needs.
+
+        cgen-phase.cc supplies the driver for the compiler. You should
+        not modify this code.  The script mycoolc can pass any of the
+        standard flags to the code generator; for this assignment, -c
+        (code generator debug) may be useful as it sets a global
+        variable cgen_debug to true (1).  If you want your code
+        generator to print debug information when the option is set,
+        write your debug code in the following format:
+
+	      if (cgen_debug)
+	      {
+		...
+	      }
+
+	symtab.h contains a symbol table implementation. You may
+        modify this file if you'd like.  To do so, remove the link and
+        copy `[course dir]/include/PA5/symtab.h' to your local
+        directory.
+
+	cool.h contains definitions that are used by almost all parts
+	of the compiler. DO NOT MODIFY.
+
+        tree.h contains the base class `tree_node' of the AST nodes.
+
+        cool-tree.cc, cool-tree.h, and cool-tree.handcode.h contain
+        the declarations and definitions of code generation AST nodes.
+        You may add fields as you wish, but you shouldn't modify any
+        of the methods already there except `code', which you may
+        modify or remove as you wish.  Note that cool-tree.handcode.h
+        is different from the same file in PA4---this file contains
+        function definitions needed for the cgen.cc skeleton.  You may
+        modify cool-tree.h or cool-tree.handcode.h, but don't modify
+        cool-tree.cc.  Place all method definitions in cgen.cc
+
+	stringtab.h contains functions to manipulate the string table.
+	DO NOT MODIFY.
+
+	dumptype.cc contains functions for printing out an abstract
+	syntax tree.  DO NOT MODIFY.
+
+        *.d dependency files, generated automatically by the makefile.
+
+Instructions
+------------
+
+	To compile your compiler and code generator type:
+
+	% gmake cgen
+
+	To test your compiler, type:
+
+	% ./mycoolc [-o output filename] <file1.cl> <file2.cl> ...
+
+	This command parses all the cool files given on the command
+	line, passes them through the semantic checker, and then hands
+	the program AST to your code generator.
+
+	To run your compiler on the file example.cl, type:
+
+	% gmake dotest
+
+	To run the produced code:
+
+	% spim -file file1.s  /* or the output filename you chose */
+	
+	To turnin your work type:
+
+	% gmake submit-clean
+
+	And run the "submit" program following the instructions on the
+	course web page.
+	
+ 	You may turn in the assignment as many times as you like.
+ 	However, only the last version will be retained for grading.
+
+	If you change architectures you must issue
+
+	% gmake clean
+
+	when you switch from one type of machine to the other.  If at
+	some point you get weird errors from the linker, you probably
+	forgot this step.
+
+	GOOD LUCK!
+
+---8<------8<------8<------8<---cut here---8<------8<------8<------8<---
+
+Write-up for PA5
+----------------
+
+1.	Our implementation involves two basic passes. The first is to collect 
+		features of each classes and emit all class tables, including name Table, 
+		object Table, prototype object table and dispatch methods table. 
+		
+		The second pass is to emit initiation function and methods of each function
+
+2.	Assignment of the class tag number. Before the first pass, we need to know 
+		the class tag number for each class. Because class inheritance relationship
+		need to be known in run time, class tag number is used to encode the 
+		inheritance relationship. Therefore, we choose to encode the class tag 
+		number by traversing the inheritance tree in depth first order. By this 
+		traversal method, we know the class tag number of parent class P, and the 
+		range of class tag number [p~ Q] for its children¡¯s classes. For a class 
+		number R, if R > Q or R < P, then R is not inherited from P. 
+
+3.	Collect attributes and methods. In each CgenNode object, we have a 
+		SymbolTable<Symbol, int> for all its attributes and methods. <Symbol, int> 
+		pair maps each attribute and method to its location in object layout or 
+		dispatch table. For dynamic dispatch to work, if the class which inherits 
+		its parent class overrides a method, the method's position in both dispatch    table are the same.
+
+4.	Formal table and let table used to map ObjectID to location. Formal table 
+		is used to map formal Symbol to its location. Let table is used to map 
+		local bindings to its location, like "let" binding or case binding. Those 
+		tables need to be allocated and initialized in before code_class_init() is
+		called, because in initiation expression, id will be used.
+
+5.	Argument passing in function/method call. To emit all methods, we need to 
+		have a consistent system for argument passing. In our implementation, 
+		arguments are pushed on top of stack in order, not in reverse order. We 
+		implement this to be consistent with run time system (argmuments in 
+		string.substr() are in such order). In addition, arguments are popped out 
+		before the method returns. This is also consistent with the run time system
+
+6.	Emit assembly code for all expressions. We emit code according to the 
+		semant operation rules.
+
+7.	Emit assignment expressions. We need to differentiate whether an ID is 
+		attribute, formal or let/case binding. Because let/case binding will be a 
+		new scope, so those are checked with the highest priority. The middle level
+		priority is formal id, then attribute are checked last.
+
+8.	Emit dispatch expressions. Because we push the actual values in order, we 
+		could evaluate each actual and then push the accumulator onto the stack, 
+		in one pass. After we load the jump table pointer, we use the 
+		SymbolTable<Symbol, int>method_table to search the entry in the jump table.
+		If some inherited classes override one method, the entry number of this 
+		method in all classes are the same. This enables dispatching according to 
+		run time type.
+
+9.	Loop expressions. We load zero to accumulator, because the semantic rules 
+		tell us that the value is always 0 after the loop.
+
+10.	Typecase expressions. Typecase expression is the most complicated. For all 
+		test case branches, we need to sort all branches according to their levels 
+		in the class inheritance tree. Classes with the deepest level in the tree 
+		will be compared first. If the object¡¯s tag name indicates that the object 
+		is the children of this class, this branch will execute. In this way, the 
+		closest ancestor will be found.
+
+11.	Let expressions. Let expressions are also complicated. We need to later use
+		that id find the location, so symbol table is used. Because let expression 
+		may be nested, we could not use register to store the location. We also 
+		need to know the location at compile time, so the location on the heap is 
+		not acceptable. Therefore, we record the location on the stack as the 
+		position of the local variable, because we have full control of the stack 
+		growth, and we could later use -pos($fp) to get the variable.
+
+12.	For equal expression, we used equality_test, which is in run time system.
+
+>>>>>>>>>>>>>>>> Test cases >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+We have separate test cases in the directory tests/ 
+Each .cl file test one or more expressions, and different class relationship
+We also have example.cl to test all expressions in one file
+
+We also test garbage collector in tests/25_gc.cl
+
+
